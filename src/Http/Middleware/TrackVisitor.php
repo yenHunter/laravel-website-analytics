@@ -29,7 +29,7 @@ class TrackVisitor
                     $visitor->increment('visits');
                 } else {
                     // Handle Localhost testing
-                    $position = ($ip === '127.0.0.1') ? null : Location::get($ip);
+                    $position = ($ip === '127.0.0.1') ? 'BD' : Location::get($ip);
                     
                     WebsiteAnalytic::create([
                         'ip_address' => $ip,
