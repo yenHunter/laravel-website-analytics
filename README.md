@@ -33,7 +33,7 @@ Publish the location config:
 php artisan vendor:publish --provider="Stevebauman\Location\LocationServiceProvider"
 ```
 
-*Note: For local testing, IPs like `127.0.0.1` will not generate country data.*
+*Note: For local testing, IPs like `127.0.0.1` will not generate country data. `127.0.0.1` repersents `BD`*
 
 ---
 
