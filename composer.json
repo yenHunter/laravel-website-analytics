@@ -1,0 +1,32 @@
+{
+    "name": "yenhunter/laravel-website-analytics",
+    "description": "A lightweight visitor tracking package for Laravel.",
+    "type": "library",
+    "require": {
+        "php": "^8.1",
+        "illuminate/support": "^10.0|^11.0",
+        "stevebauman/location": "^7.6"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.8"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Yenhunter\\LaravelWebsiteAnalytics\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Firoz Ebna Jobaier",
+            "email": "firoz.jobaier@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Yenhunter\\LaravelWebsiteAnalytics\\LaravelWebsiteAnalyticsServiceProvider"
+            ]
+        }
+    }
+}
