@@ -3,6 +3,7 @@
 namespace Yenhunter\LaravelWebsiteAnalytics;
 
 use Illuminate\Support\ServiceProvider;
+use Yenhunter\LaravelWebsiteAnalytics\Console\SeedCountriesCommand;
 
 class LaravelWebsiteAnalyticsServiceProvider extends ServiceProvider
 {
@@ -21,12 +22,16 @@ class LaravelWebsiteAnalyticsServiceProvider extends ServiceProvider
     {
         // 3. Load Migrations
         // This tells Laravel "Hey, I have database tables to create"
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
         // 4. Publishing (Optional but good practice)
         if ($this->app->runningInConsole()) {
+            $this->commands([
+                SeedCountriesCommand::class,
+            ]);
+            
             $this->publishes([
-                __DIR__.'/../database/migrations' => database_path('migrations'),
+                __DIR__ . '/../database/migrations' => database_path('migrations'),
             ], 'simple-analytics-migrations');
         }
     }
