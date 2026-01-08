@@ -1,14 +1,14 @@
 # Laravel Website Analytics
 
-A lightweight, efficient visitor tracking package for Laravel applications. It tracks unique visitors, page views, and user locations (GeoIP) without bloating your database. It includes built-in helper methods to generate data for **ApexCharts** and **Vector Maps** instantly.
+A lightweight, efficient visitor tracking package for Laravel applications. It tracks unique visitors, page views, and user locations (GeoIP) without bloating your database. It includes a dedicated database for Country Coordinates, allowing for instant generation of Vector Maps without hardcoding logic in JavaScript.
 
-## Features
+## 🚀 Features
 
 *   **Efficient Tracking:** Groups visits by IP and Date (prevents spamming DB on every page reload).
 *   **GeoIP Integration:** Automatically detects Country based on IP (via `stevebauman/location`).
 *   **Bot Protection:** Ignores common bots and crawlers (configurable).
-*   **Dashboard Ready:** Helper methods to get formatted data for Line Charts and World Maps.
-*   **Performance:** Uses Caching to minimize database writes.
+*   **Database-Backed Mapping:** Includes a pre-filled database of Country Coordinates (Lat/Long) for mapping.
+*   **Dashboard Ready:** Helper methods to get formatted data for ApexCharts and Vector Maps instantly.
 
 ## Installation
 
@@ -19,49 +19,49 @@ composer require yenhunter/laravel-website-analytics
 ```
 
 ### 1. Run Migrations
-Publish and run the migrations to create the `website_analytics` table:
+Publish and run the migrations to create the `website_analytics` and `analytics_countries` tables:
 
 ```bash
 php artisan migrate
 ```
 
-### 2. Configure GeoIP (Important)
-This package relies on `stevebauman/location` for country detection. You likely need to configure it to use a driver (like MaxMind).
+### 2. Configure GeoIP
+This package relies on `stevebauman/location` for country detection. Publish the config:
 
-Publish the location config:
 ```bash
 php artisan vendor:publish --provider="Stevebauman\Location\LocationServiceProvider"
 ```
 
-*Note: For local testing, IPs like `127.0.0.1` will not generate country data. `127.0.0.1` repersents `BD`*
+### 3. Seed Country Coordinates (Important)
+To populate the map with Latitude/Longitude data for countries, run the included seeder command:
+
+```bash
+php artisan analytics:seed-countries
+```
+*This populates the `analytics_countries` table so your vector map works immediately.*
 
 ---
 
 ## Usage
 
 ### 1. Enable Tracking
-To start tracking visitors, register the Middleware in your `bootstrap/app.php` file.
+Register the Middleware in your `bootstrap/app.php` file (Laravel 11) or `Http/Kernel.php` (Laravel 10).
 
-**For Laravel 11:**
+**bootstrap/app.php:**
 ```php
-use Illuminate\Foundation\Configuration\Middleware;
 use Yenhunter\LaravelWebsiteAnalytics\Http\Middleware\TrackVisitor;
 
-return Application::configure(basePath: dirname(__DIR__))
-    ->withMiddleware(function (Middleware $middleware) {
-        
-        // Append to the 'web' group to track all web routes
-        $middleware->web(append: [
-            TrackVisitor::class,
-        ]);
-        
-    })->create();
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->web(append: [
+        TrackVisitor::class,
+    ]);
+})
 ```
 
-By default, the middleware tracks routes named `visitor.*`. You can change this behavior by publishing the config (if available) or extending the middleware.
+By default, the middleware tracks routes named `visitor.*`.
 
 ### 2. Retrieving Data for Dashboard
-You can inject the `Analytics` class into any Controller to fetch formatted statistics.
+Inject the `Analytics` class into any Controller.
 
 ```php
 namespace App\Http\Controllers;
@@ -72,10 +72,11 @@ class DashboardController extends Controller
 {
     public function index(Analytics $analytics)
     {
-        // Get data for the last 7 days (dates, total_views, unique_visitors)
+        // Get line chart data (Last 7 days)
         $chartData = $analytics->getChartData(7); 
 
-        // Get total visits grouped by Country Code (e.g., ['US' => 500, 'BD' => 200])
+        // Get map data (Returns Country Name, Coords, and Visit Count)
+        // Format: [{ name: 'USA', coords: [37.09, -95.71], visits: 500 }, ...]
         $mapData = $analytics->getMapData();
 
         return view('admin.dashboard', compact('chartData', 'mapData'));
@@ -90,7 +91,6 @@ class DashboardController extends Controller
 ### 1. Line Chart (ApexCharts)
 The `getChartData()` method returns arrays perfectly formatted for ApexCharts.
 
-**Blade:**
 ```blade
 <div id="traffic-chart"></div>
 
@@ -114,23 +114,43 @@ The `getChartData()` method returns arrays perfectly formatted for ApexCharts.
 ```
 
 ### 2. World Map (jsVectorMap)
-The `getMapData()` method returns an object keyed by Country Code (e.g., `{'US': 100, 'BD': 50}`).
+The `getMapData()` method returns an array of objects with coordinates, so you **do not** need to hardcode Lat/Long in JavaScript.
 
-**Blade:**
 ```blade
-<div id="world-map"></div>
+<div id="world-map-markers" style="height: 350px;"></div>
 
 <script>
-    var mapData = @json($mapData);
-    
-    // Logic to map country codes to your map markers...
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Get Data directly from Laravel
+        var dbData = @json($mapData);
+
+        new jsVectorMap({
+            selector: '#world-map-markers',
+            map: 'world',
+            markersSelectable: true,
+            
+            // 2. Pass data directly to markers
+            markers: dbData, // [{name: 'BD', coords: [23.68, 90.35], visits: 100}]
+
+            labels: {
+                markers: {
+                    render: marker => `${marker.name}: ${marker.visits}`
+                }
+            },
+            onMarkerTooltipShow(event, tooltip, index) {
+                tooltip.text(`${dbData[index].name}<br>Visits: ${dbData[index].visits}`);
+            }
+        });
+    });
 </script>
 ```
 
 ---
 
 ## Database Structure
-The package creates a single table: `website_analytics`
+
+### Table: `website_analytics`
+Tracks individual daily visits per IP.
 
 | Column | Type | Description |
 | :--- | :--- | :--- |
@@ -140,6 +160,17 @@ The package creates a single table: `website_analytics`
 | `visits` | Integer | Count of hits per day |
 | `country_code` | String | ISO Code (e.g., US, BD) |
 | `user_agent` | String | Browser/Device Info |
+
+### Table: `analytics_countries`
+Stores static coordinate data for mapping. Populated via `analytics:seed-countries`.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | BigInt | Primary Key |
+| `country_code` | String | Unique ISO Code (e.g., US) |
+| `name` | String | Country Name (e.g., United States) |
+| `lat` | Decimal | Latitude |
+| `long` | Decimal | Longitude |
 
 ## License
 The MIT License (MIT). Please see License File for more information.
