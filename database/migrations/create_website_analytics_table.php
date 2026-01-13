@@ -15,27 +15,12 @@ return new class extends Migration
         if (!Schema::hasTable('website_analytics')) {
             Schema::create('website_analytics', function (Blueprint $table) {
                 $table->id();
-                
-                // IP Address (45 chars to support IPv6)
-                $table->string('ip_address', 45);
-                
-                // Grouping by date (YYYY-MM-DD)
-                $table->date('visit_date');
-                
-                // Counter for hits per day
-                $table->integer('visits')->default(1);
-                
-                // Two letter country code (US, BD, IN)
-                $table->string('country_code', 3)->nullable();
-                
-                // Browser/Device info
-                $table->string('user_agent')->nullable();
-                
+                $table->string('ip_address', 45); // IP Address (45 chars to support IPv6)
+                $table->date('visit_date'); // Grouping by date (YYYY-MM-DD)
+                $table->integer('visits')->default(1); // Counter for hits per day
+                $table->string('country_code', 3)->nullable(); // Two letter country code (US, BD, IN)
+                $table->string('user_agent')->nullable(); // Browser/Device info
                 $table->timestamps();
-
-                // ⚡ PERFORMANCE INDEX ⚡
-                // Since the Middleware queries by IP AND Date every time, 
-                // this compound index makes that lookup instant.
                 $table->index(['ip_address', 'visit_date']);
             });
         }
