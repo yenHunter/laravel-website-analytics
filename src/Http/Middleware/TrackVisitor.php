@@ -22,15 +22,26 @@ class TrackVisitor
 
             if (!Cache::has($cacheKey)) {
                 $visitor = WebsiteAnalytic::where('ip_address', $ip)
-                            ->where('visit_date', $date)
-                            ->first();
+                    ->where('visit_date', $date)
+                    ->first();
 
                 if ($visitor) {
                     $visitor->increment('visits');
                 } else {
                     // Handle Localhost testing
-                    $position = ($ip === '127.0.0.1') ? 'BD' : Location::get($ip);
-                    
+                    $position = ($ip === '127.0.0.1')
+                        ? (object) [
+                            'ip' => $ip,
+                            'countryName' => 'Bangladesh',
+                            'countryCode' => 'BD',
+                            'regionName' => 'Dhaka',
+                            'cityName' => 'Dhaka',
+                            'latitude' => '23.8103',
+                            'longitude' => '90.4125',
+                            'timezone' => 'Asia/Dhaka',
+                        ]
+                        : Location::get($ip);
+
                     WebsiteAnalytic::create([
                         'ip_address' => $ip,
                         'visit_date' => $date,
